@@ -91,9 +91,11 @@ export default class Apier {
           // console.error(e);
           // console.dir(e);
           const data = e.response.data || {};
-          const msg = (e.response.status !== 500 && (data.msg || data.error || e.message)) || '服务器出错';
-          const status = e.response.status;
-          message.error(status + ":" + msg);
+          if (!config.resNoPromptStatus || !config.resNoPromptStatus.includes(e.response.status)) {
+            const msg = (e.response.status !== 500 && (data.msg || data.error || e.message)) || '服务器出错';
+            const status = e.response.status;
+            message.error(status + ":" + msg);
+          }
           return Promise.reject({data, e});
         });
 
@@ -106,6 +108,7 @@ export default class Apier {
 
   constructor({
                 baseURL = '/api',
+                resNoPromptStatus = [],
                 timeout = 30000,
                 headers = {},
                 headerFn,
@@ -123,6 +126,7 @@ export default class Apier {
       headerFn,
       dataFn,
       interceptors,
+      resNoPromptStatus
     };
     privates.bindInterceptors();
   }

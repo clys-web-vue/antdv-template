@@ -72,7 +72,7 @@ export default class RoutesHelper {
         }
 
         if (String.isNotBlank(_.path)) {
-          routerObj.path = _.path;
+          routerObj.path = _.path.replace(/([A-Z])/g, (v) => '_' + v.toLowerCase());
         }
 
         if (String.isNotBlank(_.component)) {

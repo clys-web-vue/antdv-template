@@ -77,7 +77,7 @@ export default class Apier {
       const config = this.config || {};
       const interceptors = config.interceptors || {};
 
-      if (interceptors.reqBefore) interceptors.reqBefore.forEach(r => this.instance.interceptors.request.use(r.f, r.r));
+      if (interceptors.reqAfter) interceptors.reqAfter.reverse().forEach(r => this.instance.interceptors.request.use(r.f, r.r));
       if (interceptors.resBefore) interceptors.resBefore.forEach(r => this.instance.interceptors.response.use(r.f, r.r));
 
       this.instance.interceptors.request.use((req) => {
@@ -99,7 +99,7 @@ export default class Apier {
           return Promise.reject({data, e});
         });
 
-      if (interceptors.reqAfter) interceptors.reqAfter.forEach(r => this.instance.interceptors.request.use(r.f, r.r));
+      if (interceptors.reqBefore) interceptors.reqBefore.reverse().forEach(r => this.instance.interceptors.request.use(r.f, r.r));
       if (interceptors.resAfter) interceptors.resAfter.forEach(r => this.instance.interceptors.response.use(r.f, r.r));
 
     }

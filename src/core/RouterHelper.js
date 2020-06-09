@@ -16,10 +16,30 @@ const Privates = {
   }
 };
 
-export default class RoutesHelper {
+const defaultOptions = {
+  pathLoadDir: './views/',
+  layoutLoadDir: './layouts/',
+};
 
-  constructor({layouts, routers}) {
-    this.config = Objs.merge({}, {layouts, routers})
+const loadUtils = {
+  require: (componentPath) => (resolve) =>
+    require.ensure([], (require) => resolve(require.context('@', true, /\.vue$/)(`${componentPath.replace(/^@/, '.').replace(/\/+/g, '/')}`))),
+  weeding(obj) {
+    for (const key in obj) {
+      if (!obj.hasOwnProperty(key)) continue;
+      if (key.startsWith('_')) delete obj[key];
+    }
+  }
+};
+
+export default class RoutesHelper {
+  
+  constructor({layouts, routers, options = {}}) {
+    this.config = Objs.merge({}, {
+      layouts,
+      routers,
+      options: Objs.merge(Objs.merge({}, defaultOptions, true), options, true)
+    })
   }
 
   buildLayouts() {
@@ -36,11 +56,11 @@ export default class RoutesHelper {
       const item = this.config.layouts[i];
       if (String.isBlank(item.name) || String.isBlank(item.path)) continue;
       if (item.default) this.defaultLayout = item.name;
-      let path = `./layouts/${item.path}.vue`.replace(/\/+/g, '/');
+      let path = `${this.config.options.layoutLoadDir}${item.path}.vue`;
       layoutMap[item.name] = {
         name: item.name,
         path,
-        component: r => require.ensure([], (require) => r(require.context('@', true, /\.vue$/)(`${path}`)))
+        component: loadUtils.require(path)
       };
     }
     this.layoutMap = layoutMap;
@@ -76,14 +96,14 @@ export default class RoutesHelper {
         }
 
         if (String.isNotBlank(_.component)) {
-          const componentPath = _.component.replace(/^@/, '.');
+          const componentPath = _.component;
           // routerObj._dev.componentPath = componentPath;
-          routerObj.component = this.utils.require(componentPath);
+          routerObj.component = loadUtils.require(componentPath);
         } else {
           if (String.isNotBlank(_.path)) {
-            const componentPath = `./views/${path}/${_.path}.vue`.replace(/\/+/g, '/');
+            const componentPath = `${this.config.options.pathLoadDir}${path}/${_.path}.vue`;
             // routerObj._dev.componentPath = componentPath;
-            routerObj.component = this.utils.require(componentPath);
+            routerObj.component = loadUtils.require(componentPath);
           }
           if (isTop || r.children) {
             if (!_.layout && r.children && !isTop) {
@@ -283,7 +303,7 @@ export default class RoutesHelper {
           }
         }
 
-        this.utils.weeding(r);
+        loadUtils.weeding(r);
         Objs.merge(routerObj, r);
 
         routerList.push(routerObj);
@@ -318,15 +338,4 @@ export default class RoutesHelper {
       }
     );
   }
-
-  utils = {
-    require: (componentPath) => (resolve) =>
-      require.ensure([], (require) => resolve(require.context('@', true, /\.vue$/)(`${componentPath}`))),
-    weeding(obj) {
-      for (const key in obj) {
-        if (!obj.hasOwnProperty(key)) continue;
-        if (key.startsWith('_')) delete obj[key];
-      }
-    }
-  };
 }

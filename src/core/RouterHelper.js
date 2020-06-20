@@ -1,5 +1,5 @@
 import Objs from 'nightnya-common-utils/Objs'
-import String from 'nightnya-common-utils/Strings'
+import Strings from 'nightnya-common-utils/Strings'
 import Lists from 'nightnya-common-utils/Lists'
 
 const Privates = {
@@ -23,7 +23,26 @@ const defaultOptions = {
 
 const loadUtils = {
   require: (componentPath) => (resolve) =>
-    require.ensure([], (require) => resolve(require.context('@', true, /\.vue$/)(`${componentPath.replace(/^@/, '.').replace(/\/+/g, '/')}`))),
+    require.ensure([], (require) => {
+      const files = require.context('@', true, /\.vue$/);
+      const filePath = `${componentPath.replace(/^@/, '.').replace(/\/+/g, '/')}`;
+      const path = filePath.replace(/\.vue$/i, '');
+      let res;
+      try {
+        res = files(filePath);
+      } catch (e) {
+        try {
+          res = files(path + '/index.vue');
+        } catch (e) {
+          try {
+            res = files(path + '/index.js');
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+      resolve(res);
+    }),
   weeding(obj) {
     for (const key in obj) {
       if (!obj.hasOwnProperty(key)) continue;
@@ -33,7 +52,7 @@ const loadUtils = {
 };
 
 export default class RoutesHelper {
-  
+
   constructor({layouts, routers, options = {}}) {
     this.config = Objs.merge({}, {
       layouts,
@@ -54,7 +73,7 @@ export default class RoutesHelper {
     let layoutMap = {};
     for (let i = 0, len = this.config.layouts.length; i < len; i++) {
       const item = this.config.layouts[i];
-      if (String.isBlank(item.name) || String.isBlank(item.path)) continue;
+      if (Strings.isBlank(item.name) || Strings.isBlank(item.path)) continue;
       if (item.default) this.defaultLayout = item.name;
       let path = `${this.config.options.layoutLoadDir}${item.path}.vue`;
       layoutMap[item.name] = {
@@ -68,8 +87,8 @@ export default class RoutesHelper {
   }
 
   buildRouters() {
-    const helper = ({routers, path = '', titles = [], permissions = [], beforeEnter, rootRouterList}) => {
-      const isTop = String.isBlank(path);
+    const helper = ({routers, componentLoadPath = '', titles = [], permissions = [], beforeEnter, rootRouterList}) => {
+      const isTop = Strings.isBlank(componentLoadPath);
       const routerList = [];
       if (!rootRouterList) {
         rootRouterList = routerList;
@@ -82,60 +101,82 @@ export default class RoutesHelper {
           meta: {}
         };
 
-        routerObj.meta._titles = [...titles, (r.meta && r.meta.title) || r.title || ''];
+        /*
+        标题
+         */
+        routerObj.meta._titles = [...titles];
+        if (r.meta && r.meta.title) {
+          routerObj.meta._titles.push(r.meta.title);
+          if (!r.title) {
+            r.title = r.meta.title;
+          }
+        } else {
+          routerObj.meta._titles.push(r.title || '');
+        }
 
         const _ = r._ || {};
 
+        /*
+        权限链
+         */
         routerObj.meta._permissions = [...permissions];
-        if (String.isNotBlank(_.permission)) {
+        if (Strings.isNotBlank(_.permission)) {
           routerObj.meta._permissions.push(_.permission);
         }
 
-        if (String.isNotBlank(_.path)) {
+        /*
+        处理path
+         */
+        if (Strings.isNotBlank(r.path)) {
+          routerObj.path = r.path;
+          delete r.path;
+        } else if (Strings.isNotBlank(_.path)) {
+          routerObj.path = _.path.replace(/([A-Z])/g, (v) => '_' + v.toLowerCase());
+        } else if (Strings.isNotBlank(r.name)) {
+          _.path = r.name
+            .replace(new RegExp('^' + (componentLoadPath.replace('/', '')), 'i'), '')
+            .replace(/^([A-Z])/, (v) => v.toLowerCase());
           routerObj.path = _.path.replace(/([A-Z])/g, (v) => '_' + v.toLowerCase());
         }
 
-        if (String.isNotBlank(_.component)) {
-          const componentPath = _.component;
-          // routerObj._dev.componentPath = componentPath;
-          routerObj.component = loadUtils.require(componentPath);
-        } else {
-          if (String.isNotBlank(_.path)) {
-            const componentPath = `${this.config.options.pathLoadDir}${path}/${_.path}.vue`;
-            // routerObj._dev.componentPath = componentPath;
-            routerObj.component = loadUtils.require(componentPath);
-          }
-          if (isTop || r.children) {
-            if (!_.layout && r.children && !isTop) {
-              routerObj.component = this.emptyLayout;
-              // routerObj._dev.layout = 'empty';
-            } else if (_.layout !== false) {
-              if (String.isNotBlank(_.layout) && this.layoutMap[_.layout]) {
-                routerObj.component = this.layoutMap[_.layout].component;
-                // routerObj._dev.layout = _.layout;
-              }
-              if (!routerObj.component && String.isNotBlank(this.defaultLayout)) {
-                routerObj.component = this.layoutMap[this.defaultLayout].component;
-                // routerObj._dev.layout = this.defaultLayout;
-              }
+        routerObj.path = (routerObj.path || '/').replace(/\/+/g, '/');
+        if (isTop && !routerObj.path.startsWith('/')) {
+          routerObj.path = '/' + routerObj.path;
+        }
 
+        /*
+        处理layout
+         */
+        if (r.children) {
+          if (!_.layout && !isTop) {
+            routerObj.component = this.emptyLayout;
+          } else if (_.layout !== false) {
+            if (this.layoutMap[_.layout]) {
+              routerObj.component = this.layoutMap[_.layout].component;
+            }
+            if (!routerObj.component && Strings.isNotBlank(this.defaultLayout)) {
+              routerObj.component = this.layoutMap[this.defaultLayout].component;
             }
           }
+        } else if (Strings.isNotBlank(_.component)) {
+          const componentPath = _.component;
+          routerObj.component = loadUtils.require(componentPath);
+        } else if (Strings.isNotBlank(_.path)) {
+          const componentPath = `${this.config.options.pathLoadDir}${componentLoadPath}/${_.path}.vue`;
+          routerObj.component = loadUtils.require(componentPath);
         }
+
 
         for (const k in _) {
           if (!_.hasOwnProperty(k)) continue;
           if (k.startsWith('_')) routerObj.meta[k] = _[k];
         }
 
-        routerObj.path = (routerObj.path || r.path || '/').replace(/\/+/g, '/');
-        if (isTop && !routerObj.path.startsWith('/')) {
-          routerObj.path = '/' + routerObj.path;
-        }
-        delete r.path;
-        const childrenPath = routerObj.path === '/' ? (r.name || '/') : `${path}/${routerObj.path}`.replace(/\/+/g, '/');
+        const childrenPath = (routerObj.path === '/' ? ('/' + (r.name || '')) : `${componentLoadPath}/${routerObj.path}`).replace(/\/+/g, '/');
 
-
+        /*
+        登陆校验
+         */
         if (typeof _.loginVerify === "function") {
           let currentPermissions = [];
           const setPermission = (permissions) => {
@@ -148,7 +189,7 @@ export default class RoutesHelper {
             {
               name: r.name
             } : {
-              path: `${path}/${routerObj.path}`.replace(/\/+/g, '/')
+              path: `${componentLoadPath}/${routerObj.path}`.replace(/\/+/g, '/')
             };
           const item = helper({
             rootRouterList,
@@ -160,7 +201,7 @@ export default class RoutesHelper {
                 _hiddenNav: true
               }
             }],
-            path: childrenPath,
+            componentLoadPath: childrenPath,
             titles: routerObj.meta._titles,
             permissions: routerObj.meta._permissions,
             beforeEnter: async (to, from, next) => {
@@ -222,7 +263,7 @@ export default class RoutesHelper {
                 _hiddenNav: true
               }
             }, permissionDenied)],
-            path: childrenPath,
+            componentLoadPath: childrenPath,
             titles: routerObj.meta._titles,
             permissions: routerObj.meta._permissions
           })[0];
@@ -264,13 +305,16 @@ export default class RoutesHelper {
           routerObj.beforeEnter = beforeEnter;
         }
 
+        /*
+        孩子级
+         */
         if (r.children) {
           const children = r.children;
           delete r.children;
           const subList = helper({
             rootRouterList,
             routers: children,
-            path: childrenPath,
+            componentLoadPath: childrenPath,
             titles: routerObj.meta._titles,
             permissions: routerObj.meta._permissions,
             beforeEnter
@@ -280,6 +324,9 @@ export default class RoutesHelper {
             routerObj.children = [...routerObj.children, ...subList]
           }
         }
+        /*
+        隐藏的孩子级
+         */
         if (r.hiddenChildren) {
           const hiddenChildren = r.hiddenChildren;
           delete r.hiddenChildren;
@@ -287,7 +334,7 @@ export default class RoutesHelper {
           const subList = helper({
             rootRouterList,
             routers: hiddenChildren,
-            path: childrenPath,
+            componentLoadPath: childrenPath,
             titles: routerObj.meta._titles,
             permissions: routerObj.meta._permissions,
             beforeEnter
@@ -325,17 +372,16 @@ export default class RoutesHelper {
   bindEvents(router) {
     this.router = router;
     router.afterEach((to) => {
-        let title = '';
-        if (String.isNotBlank(to.meta.title)) {
-          title = to.meta.title
-        } else if (to.meta && Lists.isNotEmpty(to.meta._titles)) {
-          for (let i = to.meta._titles.length - 1; i > 0; i--) {
-            title += `<-${to.meta._titles[i]}`
-          }
-          title = title.replace(/<-/, '')
+      let title = '';
+      if (Strings.isNotBlank(to.meta.title)) {
+        title = to.meta.title
+      } else if (to.meta && Lists.isNotEmpty(to.meta._titles)) {
+        for (let i = to.meta._titles.length - 1; i > 0; i--) {
+          title += `<-${to.meta._titles[i]}`
         }
-        document.title = title;
+        title = title.replace(/<-/, '')
       }
-    );
+      document.title = title;
+    });
   }
 }

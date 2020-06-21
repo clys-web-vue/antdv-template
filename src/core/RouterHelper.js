@@ -134,7 +134,7 @@ export default class RoutesHelper {
           routerObj.path = _.path.replace(/([A-Z])/g, (v) => '_' + v.toLowerCase());
         } else if (Strings.isNotBlank(r.name)) {
           _.path = r.name
-            .replace(new RegExp('^' + (componentLoadPath.replace('/', '')), 'i'), '')
+            .replace(new RegExp('^' + (componentLoadPath.replace(/\//g, '')), 'i'), '')
             .replace(/^([A-Z])/, (v) => v.toLowerCase());
           routerObj.path = _.path.replace(/([A-Z])/g, (v) => '_' + v.toLowerCase());
         }

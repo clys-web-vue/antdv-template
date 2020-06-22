@@ -9,13 +9,13 @@
       <Menu theme="dark" mode="inline" activityRouteName="user"></Menu>
     </a-layout-sider>
     <a-layout ref="routerView">
+      <a-back-top :target="()=>$refs.routerView.$el"/>
       <a-layout-content :style="{ margin: '0 16px', overflow: 'initial' ,paddingBottom:'15px'}">
         <a-breadcrumb style="margin: 16px 0">
           <a-breadcrumb-item v-for="v in titles()" :key="v">{{v}}</a-breadcrumb-item>
         </a-breadcrumb>
         <a-card :bodyStyle="{minHeight: '360px' ,padding:'15px',cursor:'initial',}" :hoverable="true">
           <router-view/>
-          <a-back-top/>
         </a-card>
       </a-layout-content>
       <a-layout-footer style="text-align: center">

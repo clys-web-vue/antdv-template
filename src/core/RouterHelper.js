@@ -31,9 +31,15 @@ const loadUtils = {
       try {
         res = files(filePath);
       } catch (e) {
+        if (!e.toString().includes('Cannot find module')) {
+          console.error(e);
+        }
         try {
           res = files(path + '/index.vue');
         } catch (e) {
+          if (!e.toString().includes('Cannot find module')) {
+            console.error(e);
+          }
           try {
             res = files(path + '/index.js');
           } catch (e) {

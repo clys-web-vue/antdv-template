@@ -90,10 +90,11 @@ export default class Apier {
         (e) => {
           // console.error(e);
           // console.dir(e);
-          const data = e.response.data || {};
-          if (!config.resNoPromptStatus || !config.resNoPromptStatus.includes(e.response.status)) {
-            const msg = (e.response.status !== 500 && (data.msg || data.error || e.message)) || '服务器出错';
-            const status = e.response.status;
+          const response = (e.response || {});
+          const data = response.data || {};
+          if (!config.resNoPromptStatus || !config.resNoPromptStatus.includes(response.status)) {
+            const msg = (response.status !== 500 && (data.msg || data.error || e.message)) || '服务器出错';
+            const status = response.status || '';
             message.error(status + ":" + msg);
           }
           return Promise.reject({data, e});

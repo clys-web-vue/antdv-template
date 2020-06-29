@@ -1,5 +1,7 @@
-import Apier from 'nightnya-web-helpers/http/Apier';
+import {Apier} from 'nightnya-web-helpers';
 import {message} from "ant-design-vue";
+import Objs from 'nightnya-common-utils/Objs';
+
 const apier = new Apier({
   baseURL: '/ipapi',
   interceptors: {
@@ -25,8 +27,6 @@ const apier = new Apier({
     resAfter: []
   }
 });
-
-apier.target()
 import GetApi from './GetApi'
 
 export default {

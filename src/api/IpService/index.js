@@ -14,8 +14,8 @@ const apier = new Apier({
     reqAfter: [],
     resBefore: [{
       r: (e) => {
-        let response = Objs.getPathVal(e, 'response');
-        let data = Objs.getPathVal(e, 'response?.data');
+        const response = Objs.getPathVal(e, 'response');
+        const data = Objs.getPathVal(e, 'response?.data');
         if (!config.resNoPromptStatus || !config.resNoPromptStatus.includes(response.status)) {
           const msg = (response.status !== 500 && (data.msg || data.error || e.message)) || '服务器出错';
           const status = response.status || '';

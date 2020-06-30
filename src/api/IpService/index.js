@@ -16,11 +16,9 @@ const apier = new Apier({
       r: (e) => {
         const response = Objs.getPathVal(e, 'response');
         const data = Objs.getPathVal(e, 'response?.data');
-        if (!config.resNoPromptStatus || !config.resNoPromptStatus.includes(response.status)) {
-          const msg = (response.status !== 500 && (data.msg || data.error || e.message)) || '服务器出错';
-          const status = response.status || '';
-          message.error(status + ":" + msg);
-        }
+        const msg = (response.status !== 500 && (data.msg || data.error || e.message)) || '服务器出错';
+        const status = response.status || '';
+        message.error(status + ":" + msg);
         return Promise.reject(e);
       }
     }],

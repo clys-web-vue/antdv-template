@@ -1,13 +1,13 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import RouterHelper from '../core/RouterHelper'
+import {VueRouterHelper} from 'nightnya-vue-helpers'
 import layouts from './layouts'
 import routers from './routers'
 
 Vue.use(Router);
 
 
-const routesHelper = new RouterHelper({layouts, routers});
+const routesHelper = new VueRouterHelper({layouts, routers});
 export const routes = routesHelper.build();
 
 const router = new Router({
